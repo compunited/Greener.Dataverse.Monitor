@@ -1,0 +1,121 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag (e.g. v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Package ${{ matrix.rid }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, linux-x64]
+    steps:
+      - name: Validate release tag
+        id: version
+        shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ steps.version.outputs.tag }}
+          persist-credentials: false
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish both applications
+        shell: bash
+        run: |
+          set -euo pipefail
+          for APP in Monitor Report; do
+            dotnet publish "Greener.Dataverse.${APP}/Greener.Dataverse.${APP}.csproj" \
+              --configuration Release \
+              --runtime "${{ matrix.rid }}" \
+              --self-contained true \
+              -p:PublishSingleFile=true \
+              -p:IncludeNativeLibrariesForSelfExtract=true \
+              --output "dist/${APP}"
+            cp LICENSE README.md SECURITY.md THIRD-PARTY-NOTICES.md "dist/${APP}/"
+            python3 .github/scripts/collect-licenses.py \
+              "Greener.Dataverse.${APP}/obj/project.assets.json" \
+              "dist/${APP}/licenses" "${{ matrix.rid }}"
+          done
+      - name: Package ZIP archives and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          for APP in Monitor Report; do
+            (
+              cd "dist/${APP}"
+              zip -qr "../../release/Greener.Dataverse.${APP}-${RELEASE_TAG}-${{ matrix.rid }}.zip" .
+            )
+          done
+          ( cd release && sha256sum *.zip > "SHA256SUMS-${{ matrix.rid }}.txt" )
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.rid }}
+          path: release/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          merge-multiple: true
+          path: release
+      - name: Resolve tag
+        shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: echo "RELEASE_TAG=${INPUT_TAG:-${GITHUB_REF_NAME}}" >> "$GITHUB_ENV"
+      - name: Create release with downloadable assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release/* --clobber
+          else
+            gh release create "$RELEASE_TAG" release/* \
+              --verify-tag \
+              --generate-notes \
+              --title "$RELEASE_TAG"
+          fi

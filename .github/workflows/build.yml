@@ -1,0 +1,21 @@
+name: Build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore Greener.Dataverse.Monitor.slnx
+      - run: dotnet build Greener.Dataverse.Monitor.slnx --configuration Release --no-restore

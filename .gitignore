@@ -1,0 +1,64 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+artifacts/
+
+# .NET / NuGet
+*.nupkg
+*.snupkg
+*.nuspec
+packages/
+.nuget/packages/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.rsuser
+*.sln.docstates
+
+# Rider / ReSharper
+.idea/
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# VS Code
+.vscode/
+
+# Test / coverage output
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+
+# Logs and temp files
+*.log
+*.csv
+*.tmp
+*.temp
+**/log/
+
+# Local monitor/runtime output
+**/dataverse_monitor.csv
+**/msal_cache/
+
+# Local environment-specific config overlays
+appsettings.*.local.json
+
+# Generated reports and charts may contain customer configuration or telemetry
+*.pdf
+**/charts_*/
+
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key

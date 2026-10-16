@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Greener.Dataverse.Monitor/Greener.Dataverse.Monitor.csproj" />
+  <Project Path="Greener.Dataverse.Report/Greener.Dataverse.Report.csproj" />
+</Solution>
