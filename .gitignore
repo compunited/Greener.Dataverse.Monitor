@@ -62,3 +62,7 @@ appsettings.*.local.json
 *.pfx
 *.p12
 *.key
+
+# Python workflow helper caches
+__pycache__/
+*.py[cod]

@@ -48,7 +48,9 @@ def collect(assets_path: Path, output: Path, runtime: str) -> None:
             index.append(f"- {identity}: {metadata}")
         for candidate in package.rglob("*"):
             name = candidate.name.lower()
-            if candidate.is_file() and name.startswith(("license", "packagelicense", "third-party", "thirdparty", "notice", "copying")):
+            in_notices = any(part.lower() in ("notices", "licenses")
+                             for part in candidate.relative_to(package).parts[:-1])
+            if candidate.is_file() and (in_notices or name.startswith(("license", "packagelicense", "third-party", "thirdparty", "notice", "copying"))):
                 files.add(candidate)
         for source in files:
             target = destination / source.relative_to(package)

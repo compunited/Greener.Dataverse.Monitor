@@ -11,11 +11,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.x'
       - run: dotnet restore Greener.Dataverse.Monitor.slnx
       - run: dotnet build Greener.Dataverse.Monitor.slnx --configuration Release --no-restore
+      - name: Audit direct and transitive dependencies
+        run: dotnet list Greener.Dataverse.Monitor.slnx package --vulnerable --include-transitive
+      - name: Generate a report from synthetic data
+        run: python3 .github/scripts/smoke-report.py Greener.Dataverse.Report/bin/Release/net10.0/Greener.Dataverse.Report.dll
